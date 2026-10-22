@@ -21,6 +21,7 @@ h1{font-family:var(--pix);font-size:clamp(2rem,5vw,2.9rem);margin:0;color:var(--
 .band{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-family:var(--pix);font-size:1.2rem;font-weight:500}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
 .band canvas{width:33px;height:39px;image-rendering:pixelated;flex:none}
+.band button{margin-left:auto;font-size:.95rem;padding:2px 10px}
 .band .d{color:var(--gold)}.band .st{min-width:0}.band .m{border:2px solid #fff;border-radius:4px;padding:0 9px;color:var(--ink)}
 button{font-family:var(--pix);font-size:1rem;font-weight:500;color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)}
 button:hover{background:#fff}
@@ -81,7 +82,7 @@ code{font-size:.92em}
 <div class="wrap">
   <header><h1>Les Gouttes</h1><p class="sub">L'eau des rivières du Grand Est, semaine par semaine, de 2000 à 2026. 266 stations, 266 gouttes.</p></header>
 
-  <div class="band" id="band"><canvas id="bh" width="11" height="13" aria-hidden="true"></canvas><span class="d" id="bd"></span><span class="st" id="bs"></span><span class="m" id="bm"></span></div>
+  <div class="band" id="band"><canvas id="bh" width="11" height="13" aria-hidden="true"></canvas><span class="d" id="bd"></span><span class="st" id="bs"></span><span class="m" id="bm"></span><button type="button" id="bSnd" aria-pressed="true">Son : activé</button></div>
   <div class="sr" id="live" aria-live="polite"></div>
 
   <div class="frise">
@@ -119,6 +120,7 @@ code{font-size:.92em}
     <p><b>Météo de la station.</b> Pluie, neige, température et humidité viennent des colonnes du fichier. La quantité de gouttes de pluie et de flocons suit la pluie et la neige de la semaine ; l'humidité est donnée en chiffres dans le texte.</p>
     <p><b>Ambiances.</b> Dans l'écran de station et la longue-vue, le décor change avec l'humeur de la semaine, donc avec le débit : sol craquelé, roches rouges et braises pour « assoiffée », ocre pour « inquiète », vert pour « tranquille », vert d'eau pour « ravie », bassins, nénuphars, cascade et bulles pour « panique », gris pour une semaine sans mesure. Sur la carte, un voile orange apparaît quand plus de 20 % des stations mesurées sont assoiffées, et devient plus fort à mesure que leur part augmente ; un voile bleu fait de même pour les stations en panique.</p>
     <p><b>Carte.</b> Les gouttes sont placées d'après <code>lat</code> et <code>lon</code>. La zone verte est dessinée autour des stations : ce n'est pas le contour réel de la région. On s'y déplace en glissant et on zoome à la molette, en pinçant ou avec les boutons + et −. Les traits bleus relient en ligne droite les stations d'une même rivière, de l'amont vers l'aval.</p>
+    <p><b>Sons.</b> Les sons sont synthétisés dans le navigateur, sans enregistrement. Le vent suit l'humeur de la station, le bruit de l'eau suit la largeur de la rivière (donc le débit), la pluie suit la pluie de la semaine ; les bulles et les craquements accompagnent les semaines « panique » et « assoiffée ». Dans la longue-vue, la semaine de gauche s'entend à gauche et celle de droite à droite, chacune d'autant plus fort qu'elle occupe de place à l'écran. Le bouton « Son » en haut coupe tout.</p>
     <p><b>Dessin.</b> Les arbres, la forêt, le personnage (une petite illustratrice au casque), les rochers, plantes, volcans et cascades, le panneau, les coffres et la forme des têtes sont du décor. Seuls les chiffres, les dates, les couleurs d'humeur, le choix de l'ambiance, les voiles de la carte, la largeur de l'eau, la pluie, la neige et le thermomètre traduisent des données.</p>
   </div>
 </div>
@@ -214,8 +216,8 @@ const toS=(x,y)=>[(x-S.cx)*S.Z+160,(y-S.cy)*S.Z+90],toW=(x,y)=>[(x-160)/S.Z+S.cx
 const stS=i=>toS(bx(ST[i]),by(ST[i]));
 function clampCam(){const hw=160/S.Z,hh=90/S.Z;S.cx=clamp(S.cx,hw,320-hw);S.cy=clamp(S.cy,hh,180-hh)}
 function zoomAt(f,sx,sy){if(sx==null){const[x,y]=stS(S.si);[sx,sy]=x>0&&x<320&&y>0&&y<180?[x,y]:[160,90]}
-  const[wx,wy]=toW(sx,sy);S.Z=clamp(S.Z*f,ZMIN,ZMAX);S.cx=wx-(sx-160)/S.Z;S.cy=wy-(sy-90)/S.Z;clampCam();buildExtra()}
-function recenter(){S.Z=1;S.cx=160;S.cy=90;buildExtra()}
+  const[wx,wy]=toW(sx,sy);const Z0=S.Z;S.Z=clamp(S.Z*f,ZMIN,ZMAX);if(S.Z!==Z0&&performance.now()-SND.last>180)(f>1?SFX.zoomIn:SFX.zoomOut)();S.cx=wx-(sx-160)/S.Z;S.cy=wy-(sy-90)/S.Z;clampCam();buildExtra()}
+function recenter(){if(S.Z>1)SFX.zoomOut();S.Z=1;S.cx=160;S.cy=90;buildExtra()}
 function ensureVisible(i){const[x,y]=stS(i);if(x<24||x>296||y<24||y>160){S.cx=bx(ST[i]);S.cy=by(ST[i]);clampCam()}}
 const MAPORDER=[...ST.keys()].sort((a,b)=>ST[b].la-ST[a].la);
 function drawMap(t){const Z=S.Z,big=Z>=BIGZ,res=bgRes(Z),bg=bgFor(Z);
@@ -403,12 +405,12 @@ function keysHelp(){const k=s=>`<kbd>${s}</kbd>`,T={
   $('keys').innerHTML=T[S.scr]+` · ${k('1')}–${k('3')} choisir l'écran · ${k('P')} lecture`}
 
 /* ---------- actions ---------- */
-function setW(w){w=clamp(w|0,0,NW-1);if(w===S.w)return;S.w=w;updateUI()}
-function selectSt(i){if(i===S.si)return;S.si=i;S.chest=null;ensureVisible(i);updateUI()}
-function go(scr,focus){S.scr=scr;S.hover=-1;S.hoverChest=-1;updateUI();if(focus){const c=F[scr].c;c.focus({preventScroll:true});F[scr].fr.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'})}}
+function setW(w){w=clamp(w|0,0,NW-1);if(w===S.w)return;S.w=w;if(!S.play&&performance.now()-SND.tick>45){SND.tick=performance.now();SFX.tick()}updateUI()}
+function selectSt(i){if(i===S.si)return;S.si=i;S.chest=null;ensureVisible(i);SFX.drop(ST[i].kk[S.w]);updateUI()}
+function go(scr,focus){if(scr==='st'&&S.scr==='map'&&focus)SFX.enter();S.scr=scr;S.hover=-1;S.hoverChest=-1;updateUI();if(focus){const c=F[scr].c;c.focus({preventScroll:true});F[scr].fr.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'})}}
 function isOpen(k){const r=ST[S.si].rec[k];return S.chest===k&&!!r&&r.w===S.w}
-function openChest(k){const r=ST[S.si].rec[k];if(!r)return;if(isOpen(k)){const back=S.chestFrom??S.w;S.chest=null;S.w=back;updateUI();return}
-  if(!(S.chest&&isOpen(S.chest)))S.chestFrom=S.w;S.chest=k;S.w=r.w;updateUI()}
+function openChest(k){const r=ST[S.si].rec[k];if(!r)return;if(isOpen(k)){const back=S.chestFrom??S.w;S.chest=null;S.w=back;SFX.chestClose();updateUI();return}
+  if(!(S.chest&&isOpen(S.chest)))S.chestFrom=S.w;S.chest=k;S.w=r.w;SFX.chestOpen();updateUI()}
 function togglePlay(on=!S.play){S.play=on;if(on&&S.w>=NW-1)S.w=0;$('bP').setAttribute('aria-pressed',on);$('bP').textContent=on?'Pause':'Lecture';S.lastPlay=performance.now();if(!on)updateUI()}
 $('bW-').onclick=()=>setW(S.w-1);$('bW+').onclick=()=>setW(S.w+1);$('bP').onclick=()=>togglePlay();
 /* titres : agrandir / réduire */
@@ -434,7 +436,7 @@ const inBox=(x,y,[bx,by,bw,bh])=>x>=bx-3&&x<=bx+bw+60&&y>=by-4&&y<=by+bh+2;
 SCR.filter(x=>x!=='map').forEach(sc=>{const c=F[sc].c,pos=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)/r.width*F[sc].W,(e.clientY-r.top)/r.height*180]};let drag=false;
   c.addEventListener('focus',()=>{if(S.scr!==sc)go(sc)});
   c.addEventListener('pointerdown',e=>{const[x,y]=pos(e);if(S.scr!==sc)go(sc);
-    if(sc==='lv'){drag=true;c.setPointerCapture(e.pointerId);S.split=clamp(x,4,636);return}
+    if(sc==='lv'){drag=true;SFX.swish();c.setPointerCapture(e.pointerId);S.split=clamp(x,4,636);return}
     if(sc==='st'){for(let i=0;i<4;i++)if(inBox(x,y,chestBox(i))){openChest(CHESTS[i][0]);return}return}
   });
   c.addEventListener('pointermove',e=>{const[x,y]=pos(e);
@@ -473,9 +475,63 @@ fr_.addEventListener('pointerup',()=>fdrag=false);fr_.addEventListener('pointerc
 {const L=$('leg'),t=document.createElement('span');t.textContent='Les têtes :';L.append(t);
   for(const k of[0,1,2,3,4,-1]){const sp=document.createElement('span'),c=document.createElement('canvas');c.width=11;c.height=13;c.getContext('2d').drawImage(SPB[k],0,0);sp.append(c,k<0?'pas de mesure':MOOD[k]+[' (20 % les plus bas)','','','',' (20 % les plus hauts)'][k]);L.append(sp)}}
 
+/* ---------- sons : tout est synthétisé dans le navigateur (Web Audio), aucun fichier ---------- */
+const SND={on:true,ctx:null,last:0,nodes:null,tick:0};
+try{const v=localStorage.getItem('gouttes-son');if(v==='0')SND.on=false}catch(e){}
+function audioInit(){if(SND.ctx||!SND.on)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  const c=new AC(),N=c.sampleRate*2,buf=c.createBuffer(1,N,c.sampleRate),d=buf.getChannelData(0);let b=0;
+  for(let i=0;i<N;i++){const w=Math.random()*2-1;b=(b+.02*w)/1.02;d[i]=w*.6+b*3}/* bruit blanc + un peu de bruit brun */
+  const master=c.createGain();master.gain.value=.9;master.connect(c.destination);
+  /* deux « lits » d'ambiance : A (station, ou côté gauche de la longue-vue) et B (côté droit) */
+  const bed=()=>{const out=c.createGain();out.gain.value=0;let pan=null;if(c.createStereoPanner){pan=c.createStereoPanner();out.connect(pan).connect(master)}else out.connect(master);
+    const chain=(type,f,q)=>{const s=c.createBufferSource();s.buffer=buf;s.loop=true;const fl=c.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;const gn=c.createGain();gn.gain.value=0;s.connect(fl).connect(gn).connect(out);s.start(0,Math.random()*1.5);return{fl,gn}};
+    return{out,pan,wind:chain('bandpass',420,.8),water:chain('lowpass',520,.7),bub:chain('bandpass',1400,6),rain:chain('highpass',3200,.5)}};
+  SND.nodes={master,A:bed(),B:bed()};SND.ctx=c}
+function audioResume(){if(!SND.on)return;audioInit();if(SND.ctx&&SND.ctx.state==='suspended')SND.ctx.resume()}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,audioResume,{capture:true}));
+/* règle une ambiance : vent selon l'humeur, eau selon la largeur de la rivière, pluie selon la pluie de la semaine */
+function bedSet(n,s,w,t,now,share,pan){const on=SND.on&&document.visibilityState==='visible'&&share>0&&w!=null;
+  n.out.gain.setTargetAtTime(on?share:0,now,.15);if(n.pan)n.pan.pan.setTargetAtTime(pan,now,.15);if(!on)return;
+  const k=bioK(s,w),W=half(s,s.d[w]),water=W==null?0:.03+.2*(W/63),p=s.p[w]==null?0:s.p[w]/10,sn=s.s[w]==null?0:s.s[w]/10;
+  const wind={'-1':.05,0:.17,1:.12,2:.06,3:.045,4:.05}[k]+Math.min(.06,sn/40),set=(g,v)=>g.gain.setTargetAtTime(v,now,.6);
+  set(n.wind.gn,wind*(.75+.25*Math.sin(t*.37)+.15*Math.sin(t*1.3)));n.wind.fl.frequency.setTargetAtTime(k===0?650+180*Math.sin(t*.5):360+140*Math.sin(t*.29),now,.8);
+  set(n.water.gn,water);n.water.fl.frequency.setTargetAtTime(k===4?900:k===3?700:520,now,1);
+  set(n.bub.gn,k===4?.05:k===3?.015:0);n.bub.fl.frequency.setTargetAtTime(900+Math.random()*1400,now,.05);
+  set(n.rain.gn,Math.min(.14,p/40*.14));
+  if(k===0&&Math.random()<.35*share)crack(n.out)}
+function audioUpdate(t){if(!SND.ctx||!SND.nodes)return;const now=SND.ctx.currentTime,s=ST[S.si],n=SND.nodes;
+  if(S.scr==='lv'){/* longue-vue : chaque côté pèse selon la place qu'il occupe à l'écran */
+    const A=lvA(),fL=S.split/640;
+    if(A==null){bedSet(n.A,s,null,t,now,0,0);bedSet(n.B,s,S.w,t,now,1,0)}
+    else{bedSet(n.A,s,A,t,now,fL,-.7);bedSet(n.B,s,S.w,t,now,1-fL,.7)}}
+  else{bedSet(n.A,s,S.w,t,now,1,0);bedSet(n.B,s,null,t,now,0,0)}}
+function crack(dest){const c=SND.ctx,now=c.currentTime+Math.random()*.2,o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=80+Math.random()*120;
+  g.gain.setValueAtTime(.05,now);g.gain.exponentialRampToValueAtTime(.0001,now+.04);o.connect(g).connect(dest);o.start(now);o.stop(now+.05)}
+/* bruitages 8 bits */
+function blip(notes,{type='square',dur=.07,vol=.07,gap=.06,slide=0}={}){if(!SND.on)return;audioResume();const c=SND.ctx;if(!c)return;SND.last=performance.now();let t0=c.currentTime+.005;
+  for(const f of[].concat(notes)){const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t0);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,t0+dur);
+    g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+dur);o.connect(g).connect(SND.nodes.master);o.start(t0);o.stop(t0+dur+.02);t0+=gap}}
+const SFX={
+  click:()=>blip(880,{dur:.04,vol:.05}),
+  drop:k=>blip(k<0?196:[220,294,392,523,659][k],{type:'triangle',dur:.12,vol:.12,slide:1.5}),
+  enter:()=>blip([392,523,659],{type:'triangle',dur:.09,vol:.09,gap:.07}),
+  chestOpen:()=>blip([523,659,784,1047],{dur:.09,vol:.06,gap:.08}),
+  chestClose:()=>blip([784,523],{dur:.08,vol:.05,gap:.07}),
+  zoomIn:()=>blip(440,{type:'triangle',dur:.12,vol:.08,slide:1.6}),
+  zoomOut:()=>blip(700,{type:'triangle',dur:.12,vol:.08,slide:.6}),
+  tick:()=>blip(1500,{dur:.015,vol:.025}),
+  swish:()=>blip(300,{type:'sawtooth',dur:.15,vol:.025,slide:2.2}),
+};
+/* clic générique sur les boutons, sauf si un son plus précis vient d'être joué */
+document.addEventListener('click',e=>{if(e.target.closest('button')&&performance.now()-SND.last>60)SFX.click()});
+function soundToggle(){SND.on=!SND.on;try{localStorage.setItem('gouttes-son',SND.on?'1':'0')}catch(e){}
+  const b=$('bSnd');b.setAttribute('aria-pressed',SND.on);b.textContent=SND.on?'Son : activé':'Son : coupé';if(SND.on){audioResume();SFX.enter()}else if(SND.ctx)audioUpdate(0)}
+{const b=$('bSnd');b.setAttribute('aria-pressed',SND.on);b.textContent=SND.on?'Son : activé':'Son : coupé';b.onclick=soundToggle}
+
 /* ---------- boucle ---------- */
 const DRAW={map:drawMap,st:drawStation,lv:drawLv};
-function frame(ms){const t=ms/1000;
+let audT=0;
+function frame(ms){const t=ms/1000;if(t-audT>(S.scr==='lv'?.08:.25)){audT=t;audioUpdate(t)}
   if(S.play&&ms-S.lastPlay>110){S.lastPlay=ms;if(S.w>=NW-1)togglePlay(false);else{S.w++;updateUI()}}
   for(const sc of SCR){g=F[sc].x;DRAW[sc](t)}
   requestAnimationFrame(frame)}
